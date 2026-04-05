@@ -1,0 +1,91 @@
+SUMMARY="Friday Night Funkin' rhythm game"
+DESCRIPTION="Open-source rhythm game built with HaxeFlixel"
+HOMEPAGE="https://github.com/ninjamuffin99/Funkin"
+COPYRIGHT="2020-2024 ninjamuffin99 and contributors"
+LICENSE="MIT"
+REVISION="1"
+SOURCE_URI="https://github.com/ninjamuffin99/Funkin/archive/refs/tags/v${portVersion}.tar.gz"
+CHECKSUM_SHA256="PUT_REAL_SHA256_HERE"
+
+portVersion="0.2.8"
+
+ARCHITECTURES="x86_64"
+SECONDARY_ARCHITECTURES=""
+
+SOURCE_DIR="Funkin-${portVersion}"
+
+# You’ll likely want separate ports for these later,
+# but for a first pass we treat them as build deps.
+BUILD_REQUIRES="
+    dev-lang:haxe
+    dev-libs:lime
+    dev-libs:openfl
+    media-libs:sdl2
+    media-libs:openal
+    dev-vcs:git
+"
+
+REQUIRES="
+    lib:libSDL2
+    lib:libopenal
+"
+
+PROVIDES="
+    fnf = ${portVersion}
+"
+
+BUILD()
+{
+    # HaikuPorter sets $workDir and $sourceDir
+    cd "${sourceDir}"
+
+    # Haxe setup (local haxelib repo inside workDir)
+    mkdir -p "${workDir}/haxelib"
+    haxelib setup "${workDir}/haxelib"
+
+    # Ensure lime/openfl are available (if not provided as separate ports yet)
+    # You may replace these with system haxelib installs later.
+    haxelib install lime --always
+    haxelib install openfl --always
+
+    # Make sure Haiku is recognized as a target.
+    # This is where your Lime patches matter.
+    # Example: if you add a "haiku" target to Lime:
+    #   haxelib run lime rebuild haiku
+    #   haxelib run lime build haiku -release
+
+    # For a first pass, you can try using the linux target and then
+    # adapt it once Lime has a proper Haiku backend.
+    # Replace "linux" with "haiku" once patched.
+    haxelib run lime rebuild linux
+    haxelib run lime build linux -release
+
+    # After this, you should have something like:
+    #   export/release/linux/bin/Funkin
+    # Adjust paths based on actual Lime output.
+}
+
+INSTALL()
+{
+    cd "${sourceDir}"
+
+    # Adjust this path to match whatever Lime actually produced.
+    local bindir="export/release/linux/bin"
+
+    mkdir -p "${appsDir}/FNF"
+    cp -r "${bindir}/"* "${appsDir}/FNF/"
+
+    # Assets
+    if [ -d "assets" ]; then
+        cp -r assets "${appsDir}/FNF/"
+    fi
+
+    # Create a simple launch script
+    mkdir -p "${binDir}"
+    cat > "${binDir}/fnf" <<EOF
+#!/bin/sh
+cd "${appsDir}/FNF"
+exec ./Funkin "\$@"
+EOF
+    chmod +x "${binDir}/fnf"
+}
